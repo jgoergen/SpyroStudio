@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+
+    <style type="text/css">
+
+        canvas { 
+            /*width: 1600px;*/
+            border: 1px solid #000; 
+        }
+
+        #touchSettingsDisplay { 
+            position: fixed; 
+            top: 10px; 
+            left: 10px; 
+            background-color: white; 
+            color: black; 
+        }
+
+        body { 
+        }
+
+    </style>
+
+    <title>Spyro Studio</title>
+</head>
+
+<body>
+
+    <div id="touchSettingsDisplay"></div>
+    <canvas id="canvas" width="3200" height="3200"></canvas>
+
+    <script type="text/javascript" src="./scripts/Spyro.js"></script>
+    <script type="text/javascript" src="./scripts/TouchSettings.js"></script>
+    <script type='text/javascript'>
+
+        // WORK HERE ///////////////////////////////////////////////////////////////
+
+        // SETTINGS /////////////////////////////
+
+        // SPYRO
+        var SCALING = 1;
+        var SETTING_TRANSITION_SPEED = 10;
+        var JOINT_ANGLE_CHANGE_RATE = 0.01;
+        var JOINT_LENGTH_CHANGE_RATE = 0.01;
+        var JOINT_COUNT = 3;
+        var ARM_LENGTH = 200;
+        var DEVISOR = 1.8;
+        var ANGLE_DEVISOR_CHANGE = 0.5;
+        var NEW_DRAW_ROUNDS = 1000;
+        var NEW_FADE_AMOUNT = 0.05;
+        var NEW_LINE_ALPHA = 0.2; 
+        var ANGLE_RATE_CHANGE = 0.4;
+        var ANGLE_RATE_CHANGE_START = 4;
+        var STARTING_THICKNESS = 1;
+        var R_ADJUST = 0.003;
+        var G_ADJUST = 0.002;
+        var B_ADJUST = 0.005;
+        var MAX_WIDTH = 3200;
+        var MAX_HEIGHT = 3200;
+        var MAX_JOINTS = 4;
+        var MIN_JOINTS = 1;
+
+        // TOUCH SETTINGS
+        var DRAG_THRESHOLD = 10;
+        var SETTING_WHEEL_PADDING = 20;
+        var ARRAY_VALUE_PADDING = 40;
+
+        var MAX_DRAW_ROUNDS = 4000;
+        var MIN_DRAW_ROUNDS = 100;
+        var MAX_FADE_AMOUNT = 0.07;
+        var MIN_FADE_AMOUNT = 0.0;
+        var MAX_ARM_LENGTH = 4000;
+        var MIN_ARM_LENGTH = -4000;
+        var MAX_ANGLE_CHANGE = 20;
+        var MIN_ANGLE_CHANGE = -20;
+        var MAX_ANGLE_DEVISOR = 10;
+        var MIN_ANGLE_DEVISOR = -10;
+        var MAX_ARM_DEVISOR = 10;
+        var MIN_ARM_DEVISOR = -10;
+
+        ////////////////////////////////////////
+
+        var touchSettings,
+            spyro = 
+                undefined;
+
+        var pause
+            = false;
+
+        function init() {
+
+            ctx.lineStyle = "#000";
+            ctx.fillStyle = "#000";
+            ctx.fillRect(0, 0, MAX_WIDTH, MAX_HEIGHT);
+
+            touchSettings = 
+                new TouchSettings({
+                    settings: [
+                        { name: "Joints", type: "number", value: JOINT_COUNT, lower: MIN_JOINTS, upper: MAX_JOINTS, steps: 10, callback: function (val) { $("#ff").html("Joints: " + val); if (JOINT_COUNT != val) { JOINT_COUNT = val; updateJoints(); } } },
+                        { name: "Arm length", type: "number", value: ARM_LENGTH, lower: MIN_ARM_LENGTH, upper: MAX_ARM_LENGTH, callback: function (val) { $("#ff").html("Arm length: " + val); if (ARM_LENGTH != val) { ARM_LENGTH = val; updateJoints(); } } },
+                        { name: "Angle change rate", type: "number", value: ANGLE_RATE_CHANGE, lower: MIN_ANGLE_CHANGE, upper: MAX_ANGLE_CHANGE, steps: 2000, callback: function (val) { $("#ff").html("Angle change rate: " + val); if (ANGLE_RATE_CHANGE != val) { ANGLE_RATE_CHANGE = val; updateJoints(); } } },
+                        { name: "Angle change rate start", type: "number", value: ANGLE_RATE_CHANGE_START, lower: -100, upper: 100, steps: 10, callback: function (val) { $("#ff").html("Angle change rate start: " + val); if (ANGLE_RATE_CHANGE_START != val) { ANGLE_RATE_CHANGE_START = val; updateJoints(); } } },
+                        { name: "Arm length devisor", type: "number", value: DEVISOR, lower: MIN_ANGLE_DEVISOR, upper: MAX_ARM_DEVISOR, steps: 1000, callback: function (val) { $("#ff").html("Arm length devisor: " + val); if (DEVISOR != val) { DEVISOR = val; updateJoints(); } } },
+                        { name: "Angle devisor", type: "number", value: ANGLE_DEVISOR_CHANGE, lower: MIN_ANGLE_DEVISOR, upper: MAX_ANGLE_DEVISOR, steps: 1000, callback: function (val) { $("#ff").html("Angle devisor: " + val); if (ANGLE_DEVISOR_CHANGE != val) { ANGLE_DEVISOR_CHANGE = val; updateJoints(); } } },
+                        { name: "Red change rate", type: "number", value: R_ADJUST, lower: 0, upper: 10, steps: 1000, callback: function (val) { $("#ff").html("Red change rate: " + val); if (R_ADJUST != val) { R_ADJUST = val; } } },
+                        { name: "Green change rate", type: "number", value: G_ADJUST, lower: 0, upper: 10, steps: 1000, callback: function (val) { $("#ff").html("Green change rate: " + val); if (G_ADJUST != val) { G_ADJUST = val; } } },
+                        { name: "Blue change rate", type: "number", value: B_ADJUST, lower: 0, upper: 10, steps: 1000, callback: function (val) { $("#ff").html("Blue change rate: " + val); if (B_ADJUST != val) { B_ADJUST = val; } } },
+                        { name: "Draws per round", type: "number", value: NEW_DRAW_ROUNDS, lower: MIN_DRAW_ROUNDS, upper: MAX_DRAW_ROUNDS, callback: function (val) { $("#ff").html("Draws per round: " + val); if (NEW_DRAW_ROUNDS != val) { NEW_DRAW_ROUNDS = val; } } },
+                        { name: "Line alpha", type: "number", value: NEW_LINE_ALPHA, lower: 0.01, upper: 1, steps: 1000, callback: function (val) { $("#ff").html("Line alpha: " + val); if (NEW_LINE_ALPHA != val) { NEW_LINE_ALPHA = val; } } },
+                        { name: "Fade speed", type: "number", value: NEW_FADE_AMOUNT, lower: MIN_FADE_AMOUNT, upper: MAX_FADE_AMOUNT, steps: 1000, callback: function (val) { $("#ff").html("Fade speed: " + val); if (NEW_FADE_AMOUNT != val) { NEW_FADE_AMOUNT = val; } } },
+                        { name: "Angular scaling", type: "number", value: SCALING, lower: 0.001, upper: 10, steps: 1000, callback: function (val) { $("#ff").html("Angular scaling: " + val); SCALING = val; } },
+                        { name: "Transition speed", type: "number", value: SETTING_TRANSITION_SPEED, lower: 1, upper: 1000, callback: function (val) { $("#ff").html("Transition speed: " + val); SETTING_TRANSITION_SPEED = val; } },
+                        { name: "Thickness", type: "number", value: STARTING_THICKNESS, lower: 1, upper: 40, steps: 10, callback: function (val) { $("#ff").html("Thickness: " + val); STARTING_THICKNESS = val; ctx.lineWidth = STARTING_THICKNESS; } }
+                    ],
+                    dragThreshold: DRAG_THRESHOLD,
+                    settingWheelPadding: SETTING_WHEEL_PADDING,
+                    arrayValuePadding: ARRAY_VALUE_PADDING
+                });
+
+                spyro =
+                new Spyro({
+                    scaling: SCALING,
+                    settingTransitionSpeed: SETTING_TRANSITION_SPEED,
+                    jointAngleChangeRate: JOINT_ANGLE_CHANGE_RATE,
+                    jointLengthChangeRate: JOINT_LENGTH_CHANGE_RATE,
+                    maxWidth: MAX_WIDTH,
+                    maxHeight: MAX_HEIGHT,
+                    maxJoints: MAX_JOINTS,
+                    startingThickness: STARTING_THICKNESS,
+                    rAdjust: R_ADJUST,
+                    gAdjust: G_ADJUST,
+                    bAdjust: B_ADJUST,
+                    jointCount: JOINT_COUNT,
+                    armLength: ARM_LENGTH,
+                    devisor: DEVISOR,
+                    angleDevisorChange: ANGLE_DEVISOR_CHANGE,
+                    newDrawRounds: NEW_DRAW_ROUNDS,
+                    newLineAlpha: NEW_LINE_ALPHA,
+                    newFadeAmount: NEW_FADE_AMOUNT,
+                    angleRateChange: ANGLE_RATE_CHANGE,
+                    angleRateChangeStart: ANGLE_RATE_CHANGE_START
+                });
+        }
+
+        function update() {
+
+            if (pause == true)
+                return;
+
+            spyro
+            .update(
+                ctx);
+
+            requestAnimationFrame(update);
+        }
+
+        function mouseDown(e) {
+
+            touchSettings
+            .mouseDown(
+                e.pageX,
+                e.pageY);
+        }
+
+        function mouseUp(e) {
+
+            touchSettings
+            .mouseUp();
+        }
+
+        function mouseMove(e) {
+
+            touchSettings
+            .mouseMove(
+                e.pageX,
+                e.pageY);
+        }
+
+        function secondaryMouseDown(e) {
+
+            touchSettings
+            .secondaryMouseDown(
+                e.pageX,
+                e.pageY);
+        }
+
+        function secondaryMouseUp(e) {
+
+            touchSettings
+            .secondaryMouseUp();
+        }
+
+        function secondaryMouseMove(e) {
+
+            touchSettings
+            .secondaryMouseMove(
+                e.pageX,
+                e.pageY);
+        }
+
+        // 'UNDER THE HOOD' ////////////////////////////////////////////////////////
+
+        var ctx,
+            canvas = 
+                undefined;
+
+        var isMouseDown,
+            isSecondaryMouseDown = 
+                false;
+
+        window
+        .onload = 
+            function() {
+
+                canvas = 
+                    document
+                    .getElementById(
+                        "canvas");
+
+                ctx = 
+                    canvas
+                    .getContext(
+                        "2d");
+
+                if (('ontouchstart' in window || 'onmsgesturechange' in window)) {
+
+                    document
+                    .addEventListener(
+                        "touchstart", 
+                        touchStartHanlder, 
+                        false);
+
+                    document
+                    .addEventListener(
+                        "touchmove", 
+                        touchMoveHanlder, 
+                        false);
+
+                    document
+                    .addEventListener(
+                        "touchend", 
+                        touchEndHanlder, 
+                        false);
+
+                } else {
+
+                    canvas
+                    .addEventListener(
+                        "mousemove", 
+                        mouseMoveHandler, 
+                        false);
+                        
+                    canvas
+                    .addEventListener(
+                        "mousedown", 
+                        mouseDownHandler, 
+                        false);
+                        
+                    canvas
+                    .addEventListener(
+                        "mouseup", 
+                        mouseUpHandler, 
+                        false);
+                }
+
+                //settingsInit();
+                init();
+                requestAnimationFrame(update);
+            }
+
+            function touchStartHanlder(e) {
+
+                if (e.touches.length == 1)
+                    mouseDown(e.touches[0]);
+                else if (e.touches.length == 2)
+                    secondaryMouseDown(e.touches[0]);
+            }
+
+            function touchEndHanlder(e) {
+
+                if (e.touches.length == 0)
+                    mouseUp();
+                else if (e.touches.length == 1)
+                    secondaryMouseUp();
+            }
+
+            function touchMoveHanlder(e) {
+
+                if (e.touches.length == 1)
+                    mouseMove(e.touches[0]);
+                else if (e.touches.length == 2)
+                    secondaryMouseMove(e.touches[0]);
+            }
+
+            function mouseDownHandler(e) {
+
+                if ((e.which === 3 || e.button === 2)) {
+
+                    isSecondaryMouseDown = true;
+                    secondaryMouseDown(e);
+                } else {
+
+                    isMouseDown = true;
+                    mouseDown(e);
+                }
+            }
+
+            function mouseUpHandler(e) {
+
+                if ((e.which === 3 || e.button === 2)) {
+
+                    isSecondaryMouseDown = false;
+                    secondaryMouseUp(e);
+                } else {
+
+                    isMouseDown = false;
+                    mouseUp(e);
+                }
+            }
+
+            function mouseMoveHandler(e) {
+
+                if (isMouseDown)
+                    mouseMove(e);
+                else if (isSecondaryMouseDown)
+                    secondaryMouseMove(e);
+            }
+
+    </script>
+</body>
+
+</html>
